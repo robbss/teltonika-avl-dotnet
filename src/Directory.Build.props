@@ -1,5 +1,6 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\properties\teltonika_avl_netcore.props" />
+  <Import Project="$(MSBuildThisFileDirectory)..\properties\teltonika_avl_nuget.props" />
 
   <PropertyGroup>
     <TargetFramework>net8</TargetFramework>

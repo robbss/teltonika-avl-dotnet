@@ -36,7 +36,7 @@ jobs:
           path: ${{ env.NUPKG_OUTDIR }}
 
   test:
-    name: Test .NET
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -55,7 +55,7 @@ jobs:
             /p:GITHUB_ACTIONS=false
 
   publish:
-    name: Publish packages
+    name: Publish
     needs: ['build', 'test']
     runs-on: ubuntu-latest
     if: startswith(github.ref, 'refs/tags/v') && !(endsWith(github.ref, '-rc') || endsWith(github.ref, '-dev') || endsWith(github.ref, '-prerelease'))
