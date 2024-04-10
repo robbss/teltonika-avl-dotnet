@@ -1,0 +1,21 @@
+<Project>
+    <PropertyGroup>
+        <Authors>Robert McMillan</Authors>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageIcon>images\teltonika-icon.png</PackageIcon>
+        <PackageTags>Teltonika</PackageTags>
+        <RepositoryUrl>https://github.com/RobertConanMcMillan/teltonika-avl-dotnet</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageOutputPath>$(RepoRoot)bin\$(Configuration)\nugets</PackageOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\properties\teltonika-logo.png" Pack="true" Visible="false" PackagePath="images" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+</Project>
