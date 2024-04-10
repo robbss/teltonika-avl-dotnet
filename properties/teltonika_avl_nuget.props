@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)..\properties\teltonika-logo.png" Pack="true" Visible="false" PackagePath="images" />
+        <None Include="$(MSBuildThisFileDirectory)..\properties\teltonika-icon.png" Pack="true" Visible="false" PackagePath="images" />
     </ItemGroup>
 
     <PropertyGroup>
