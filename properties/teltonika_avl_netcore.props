@@ -6,6 +6,8 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningLevel>3</WarningLevel>
         <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+        <RepoRoot>$(MSBuildThisFileDirectory)..\</RepoRoot>
+        <RequestedVerbosity Condition=" '$(RequestedVerbosity)' == '' ">minimal</RequestedVerbosity>
     </PropertyGroup>
 
     <PropertyGroup>
