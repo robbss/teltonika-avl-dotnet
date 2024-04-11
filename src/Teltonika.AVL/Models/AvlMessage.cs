@@ -2,7 +2,7 @@
 
 public class AvlMessage
 {
-    public required AvlHeader Header { get; set; }
+    public required AvlCodec Codec { get; set; }
 
     public required AvlRecord[] Records { get; set; }
 }

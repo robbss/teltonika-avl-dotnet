@@ -52,6 +52,8 @@ public class Codec8ExtendedParser : IAvlParser
             }
         }
 
+        reader.Advance(2);
+
         for (; i < elements.Length; i++)
         {
             elements[i] = new()
