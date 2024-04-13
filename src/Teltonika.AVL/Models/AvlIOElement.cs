@@ -1,6 +1,6 @@
 ﻿namespace Teltonika.AVL;
 
-public class AvlElement
+public class AvlIOElement
 {
     public short Id { get; set; }
 

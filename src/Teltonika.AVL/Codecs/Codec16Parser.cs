@@ -32,9 +32,9 @@ public class Codec16Parser : IAvlParser
         return records;
     }
 
-    private static AvlElement[] ReadElements(ref SequenceReader<byte> reader)
+    private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
-        var elements = new AvlElement[reader.ReadByte()];
+        var elements = new AvlIOElement[reader.ReadByte()];
         var i = 0;
 
         for (int size = 1; size <= 8; size *= 2)
