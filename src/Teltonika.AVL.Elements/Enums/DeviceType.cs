@@ -118,7 +118,9 @@ public enum DeviceType
     #region Legacy
 
     FM1100,
-    FM2200
+    FM2200,
+    FM3200,
+    FM3400
 
     #endregion Legacy
 }

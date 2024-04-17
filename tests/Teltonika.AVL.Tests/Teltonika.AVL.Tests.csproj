@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Teltonika.AVL.Elements\Teltonika.AVL.Elements.csproj" />
     <ProjectReference Include="..\..\src\Teltonika.AVL\Teltonika.AVL.csproj" />
   </ItemGroup>
 

@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Teltonika.AVL\Teltonika.AVL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Manuals\" />
+  </ItemGroup>
+
 </Project>

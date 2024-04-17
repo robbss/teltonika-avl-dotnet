@@ -1,4 +1,6 @@
-﻿namespace Teltonika.AVL.Tests;
+﻿using Teltonika.AVL.Elements;
+
+namespace Teltonika.AVL.Tests;
 
 public class AvlParserTests
 {
@@ -45,6 +47,41 @@ public class AvlParserTests
         var message = uut.ReadMessage(ref memory, true);
 
         Assert.NotNull(message);
+    }
+
+    [Fact]
+    public void ParseMessage_CarstenData()
+    {
+        var bytes = File.ReadAllBytes(@"C:\Users\RobertConanMcMillan\Downloads\20240401-155053-9b92e07b-7a10-4d1e-9898-8089bd3a06a2(735).data");
+        var memory = new ReadOnlyMemory<byte>(bytes);
+
+        var message = uut.ReadMessage(ref memory, true);
+        var elements = message.Records.SelectMany(o => AvlElementParser.ParseElements(DeviceType.FMB900, o.Elements)).ToList();
+
+        Assert.NotNull(message);
+    }
+
+    [Fact]
+    public void Scan_ForBeacons()
+    {
+        var boy = StringToByteArray("E2C56DB5DFFB48D2B060D0F5A71096E0");
+
+        var root = new DirectoryInfo("D:\\poopoo\\TeltonikaScripts\\Data\\Carsten");
+        var files = root.GetFiles("*", new EnumerationOptions() { RecurseSubdirectories = true });
+
+        foreach (var file in files )
+        {
+            var bytes = File.ReadAllBytes(file.FullName);
+            var memory = new ReadOnlyMemory<byte>(bytes);
+
+            var message = uut.ReadMessage(ref memory, true);
+
+            if (message.Records.Any(o => o.Elements.Any(k => k.Id == 385)))
+            {
+                var elements = message.Records.SelectMany(o => AvlElementParser.ParseElements(DeviceType.FMB900, o.Elements)).ToList();
+            }
+        }
+
     }
 
     private static byte[] StringToByteArray(string hex)

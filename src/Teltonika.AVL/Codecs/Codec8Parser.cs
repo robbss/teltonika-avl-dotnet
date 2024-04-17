@@ -32,7 +32,7 @@ public class Codec8Parser : IAvlParser
         return records;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
         var elements = new AvlIOElement[reader.ReadByte()];
