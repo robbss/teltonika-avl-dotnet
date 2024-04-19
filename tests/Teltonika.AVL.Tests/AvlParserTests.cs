@@ -18,7 +18,7 @@ public class AvlParserTests
         var bytes = StringToByteArray(hex);
         var memory = new ReadOnlyMemory<byte>(bytes);
 
-        var message = uut.ReadMessage(ref memory, true);
+        var message = uut.ParseMessage(ref memory, true);
 
         Assert.NotNull(message);
     }
@@ -30,7 +30,7 @@ public class AvlParserTests
         var bytes = StringToByteArray(hex);
         var memory = new ReadOnlyMemory<byte>(bytes);
 
-        var message = uut.ReadMessage(ref memory, true);
+        var message = uut.ParseMessage(ref memory, true);
 
         Assert.NotNull(message);
     }
@@ -42,9 +42,22 @@ public class AvlParserTests
         var bytes = StringToByteArray(hex);
         var memory = new ReadOnlyMemory<byte>(bytes);
 
-        var message = uut.ReadMessage(ref memory, true);
+        var message = uut.ParseMessage(ref memory, true);
 
         Assert.NotNull(message);
+    }
+
+    [Theory]
+    [InlineData("000000000000004A8E010000016B412CEE000100000000000000000000000000000000010005000100010100010011001D00010010015E2C880002000B000000003544C87A000E000000001DD7E06A00000100002994", TrackerType.FMB010)]
+    public void ParseElements_WithValidCodec8Extended_ReturnsElements(string hex, TrackerType trackerType)
+    {
+        var bytes = StringToByteArray(hex);
+        var memory = new ReadOnlyMemory<byte>(bytes);
+        var message = uut.ParseMessage(ref memory, true);
+
+        var elements = uut.ParseElements(message.Records.First().Elements, trackerType);
+
+        Assert.NotEmpty(elements);
     }
 
     private static byte[] StringToByteArray(string hex)

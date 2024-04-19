@@ -22,5 +22,5 @@ public class AvlRecord
 
     public byte? GenerationType { get; set; }
 
-    public AvlElement[] Elements { get; set; } = [];
+    public AvlIOElement[] Elements { get; set; } = [];
 }

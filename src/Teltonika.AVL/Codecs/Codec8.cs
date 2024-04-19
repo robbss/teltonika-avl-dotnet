@@ -5,10 +5,10 @@ using Teltonika.AVL.Extensions;
 
 namespace Teltonika.AVL.Codecs;
 
-[AvlParser(AvlCodec.Codec8)]
-public class Codec8Parser : IAvlParser
+[AvlCodecParser(AvlCodec.Codec8)]
+public class Codec8 : IAvlCodec
 {
-    public AvlRecord[] ReadRecords(ref SequenceReader<byte> reader, int count)
+    public AvlRecord[] Parse(ref SequenceReader<byte> reader, int count)
     {
         var records = new AvlRecord[count];
 
@@ -32,10 +32,10 @@ public class Codec8Parser : IAvlParser
         return records;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static AvlElement[] ReadElements(ref SequenceReader<byte> reader)
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+    private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
-        var elements = new AvlElement[reader.ReadByte()];
+        var elements = new AvlIOElement[reader.ReadByte()];
         var i = 0;
 
         for (int size = 1; size <= 8; size *= 2)

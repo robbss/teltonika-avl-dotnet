@@ -4,10 +4,10 @@ using Teltonika.AVL.Extensions;
 
 namespace Teltonika.AVL.Codecs;
 
-[AvlParser(AvlCodec.Codec16)]
-public class Codec16Parser : IAvlParser
+[AvlCodecParser(AvlCodec.Codec16)]
+public class Codec16 : IAvlCodec
 {
-    public AvlRecord[] ReadRecords(ref SequenceReader<byte> reader, int count)
+    public AvlRecord[] Parse(ref SequenceReader<byte> reader, int count)
     {
         var records = new AvlRecord[count];
 
@@ -32,9 +32,9 @@ public class Codec16Parser : IAvlParser
         return records;
     }
 
-    private static AvlElement[] ReadElements(ref SequenceReader<byte> reader)
+    private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
-        var elements = new AvlElement[reader.ReadByte()];
+        var elements = new AvlIOElement[reader.ReadByte()];
         var i = 0;
 
         for (int size = 1; size <= 8; size *= 2)
