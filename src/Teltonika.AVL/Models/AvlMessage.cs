@@ -1,4 +1,4 @@
-﻿namespace Teltonika.AVL.Models;
+﻿namespace Teltonika.AVL;
 
 public class AvlMessage
 {

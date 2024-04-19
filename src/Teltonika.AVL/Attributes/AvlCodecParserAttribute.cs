@@ -1,14 +1,14 @@
 ﻿namespace Teltonika.AVL.Attributes;
 
 [AttributeUsage(AttributeTargets.Class)]
-public class AvlParserAttribute : Attribute
+public class AvlCodecParserAttribute : Attribute
 {
-    public AvlParserAttribute(AvlCodec codec)
+    public AvlCodecParserAttribute(AvlCodec codec)
     {
         CodecId = (byte)codec;
     }
 
-    public AvlParserAttribute(byte codecId)
+    public AvlCodecParserAttribute(byte codecId)
     {
         CodecId = codecId;
     }

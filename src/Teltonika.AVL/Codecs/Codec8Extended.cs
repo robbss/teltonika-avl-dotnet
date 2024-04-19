@@ -1,17 +1,18 @@
 ﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using Teltonika.AVL.Attributes;
 using Teltonika.AVL.Extensions;
 
 namespace Teltonika.AVL.Codecs;
 
-[AvlParser(AvlCodec.Codec16)]
-public class Codec16Parser : IAvlParser
+[AvlCodecParser(AvlCodec.Codec8Extended)]
+public class Codec8Extended : IAvlCodec
 {
-    public AvlRecord[] ReadRecords(ref SequenceReader<byte> reader, int count)
+    public AvlRecord[] Parse(ref SequenceReader<byte> reader, int count)
     {
         var records = new AvlRecord[count];
 
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             records[i] = new()
             {
@@ -24,7 +25,6 @@ public class Codec16Parser : IAvlParser
                 Satellites = reader.ReadByte(),
                 Speed = reader.ReadShortBigEndian(),
                 EventId = reader.ReadShortBigEndian(),
-                GenerationType = reader.ReadByte(),
                 Elements = ReadElements(ref reader)
             };
         }
@@ -32,14 +32,15 @@ public class Codec16Parser : IAvlParser
         return records;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
-        var elements = new AvlIOElement[reader.ReadByte()];
+        var elements = new AvlIOElement[reader.ReadShortBigEndian()];
         var i = 0;
 
-        for (int size = 1; size <= 8; size *= 2)
+        for (var size = 1; size <= 8; size *= 2)
         {
-            var count = reader.ReadByte();
+            var count = reader.ReadShortBigEndian();
 
             for (; count > 0; --count)
             {
@@ -49,6 +50,17 @@ public class Codec16Parser : IAvlParser
                     Value = reader.ReadByteArray(size)
                 };
             }
+        }
+
+        reader.Advance(2);
+
+        for (; i < elements.Length; i++)
+        {
+            elements[i] = new()
+            {
+                Id = reader.ReadShortBigEndian(),
+                Value = reader.ReadByteArray(reader.ReadShortBigEndian())
+            };
         }
 
         return elements;

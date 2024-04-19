@@ -5,14 +5,14 @@ using Teltonika.AVL.Extensions;
 
 namespace Teltonika.AVL.Codecs;
 
-[AvlParser(AvlCodec.Codec8Extended)]
-public class Codec8ExtendedParser : IAvlParser
+[AvlCodecParser(AvlCodec.Codec8)]
+public class Codec8 : IAvlCodec
 {
-    public AvlRecord[] ReadRecords(ref SequenceReader<byte> reader, int count)
+    public AvlRecord[] Parse(ref SequenceReader<byte> reader, int count)
     {
         var records = new AvlRecord[count];
 
-        for (var i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             records[i] = new()
             {
@@ -24,7 +24,7 @@ public class Codec8ExtendedParser : IAvlParser
                 Angle = reader.ReadShortBigEndian(),
                 Satellites = reader.ReadByte(),
                 Speed = reader.ReadShortBigEndian(),
-                EventId = reader.ReadShortBigEndian(),
+                EventId = reader.ReadByte(),
                 Elements = ReadElements(ref reader)
             };
         }
@@ -32,35 +32,24 @@ public class Codec8ExtendedParser : IAvlParser
         return records;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     private static AvlIOElement[] ReadElements(ref SequenceReader<byte> reader)
     {
-        var elements = new AvlIOElement[reader.ReadShortBigEndian()];
+        var elements = new AvlIOElement[reader.ReadByte()];
         var i = 0;
 
-        for (var size = 1; size <= 8; size *= 2)
+        for (int size = 1; size <= 8; size *= 2)
         {
-            var count = reader.ReadShortBigEndian();
+            var count = reader.ReadByte();
 
             for (; count > 0; --count)
             {
                 elements[i++] = new()
                 {
-                    Id = reader.ReadShortBigEndian(),
+                    Id = reader.ReadByte(),
                     Value = reader.ReadByteArray(size)
                 };
             }
-        }
-
-        reader.Advance(2);
-
-        for (; i < elements.Length; i++)
-        {
-            elements[i] = new()
-            {
-                Id = reader.ReadShortBigEndian(),
-                Value = reader.ReadByteArray(reader.ReadShortBigEndian())
-            };
         }
 
         return elements;

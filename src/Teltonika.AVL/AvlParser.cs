@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Teltonika.AVL.Attributes;
 using Teltonika.AVL.Extensions;
-using Teltonika.AVL.Models;
 
 namespace Teltonika.AVL;
 
@@ -15,12 +14,12 @@ public class AvlParser
         RegisterParsersFromAssembly(Assembly.GetExecutingAssembly());
     }
 
-    public Dictionary<byte, IAvlParser> CodecParsers { get; protected init; }
+    public Dictionary<byte, IAvlCodec> CodecParsers { get; protected init; }
 
     /// <summary>
     /// Reads a <see cref="AvlMessage"/> from the supplied buffer.
     /// </summary>
-    public AvlMessage ReadMessage(ref ReadOnlyMemory<byte> buffer, bool verify = true)
+    public AvlMessage ParseMessage(ref ReadOnlyMemory<byte> buffer, bool verify = true)
     {
         var reader = new SequenceReader<byte>(new ReadOnlySequence<byte>(buffer));
         var header = ReadHeader(ref reader);
@@ -33,7 +32,7 @@ public class AvlParser
         var message = new AvlMessage()
         {
             Codec = (AvlCodec)header.CodecId,
-            Records = parser.ReadRecords(ref reader, header.NumberOfData)
+            Records = parser.Parse(ref reader, header.NumberOfData)
         };
 
         if (verify)
@@ -52,18 +51,40 @@ public class AvlParser
         return message;
     }
 
+    public List<AvlElement> ParseElements(IEnumerable<AvlIOElement> elements, TrackerType trackerType)
+    {
+        return ParseElements(elements, TeltonikaTrackers.FromType(trackerType));
+    }
+
+    public List<AvlElement> ParseElements(IEnumerable<AvlIOElement> elements, TeltonikaTracker tracker)
+    {
+        var results = new List<AvlElement>();
+
+        foreach (var element in elements)
+        {
+            if (!tracker.Elements.TryGetValue(element.Id, out var elementInfo))
+            {
+                throw new NotSupportedException($"No definition for element with id {element.Id} registered");
+            }
+
+            results.Add(AvlElementParser.Parse(element.Id, element.Value, elementInfo));
+        }
+
+        return results;
+    }
+
     /// <summary>
-    /// Register all parsers decorated with <see cref="AvlParserAttribute"/> from the supplied assembly.
+    /// Register all parsers decorated with <see cref="AvlCodecParserAttribute"/> from the supplied assembly.
     /// </summary>
     public void RegisterParsersFromAssembly(Assembly asm)
     {
         foreach (var type in asm.GetExportedTypes())
         {
-            var attr = type.GetCustomAttribute<AvlParserAttribute>();
+            var attr = type.GetCustomAttribute<AvlCodecParserAttribute>();
 
             if (attr is not null)
             {
-                CodecParsers[attr.CodecId] = ((IAvlParser?)Activator.CreateInstance(type)) ?? throw new Exception($"Unable to create instance of type {type.Name}");
+                CodecParsers[attr.CodecId] = ((IAvlCodec?)Activator.CreateInstance(type)) ?? throw new Exception($"Unable to create instance of type {type.Name}");
             }
         }
     }
