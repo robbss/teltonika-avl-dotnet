@@ -21,7 +21,13 @@ public class AvlParser
     /// </summary>
     public AvlMessage ParseMessage(ref ReadOnlyMemory<byte> buffer, bool verify = true)
     {
-        var reader = new SequenceReader<byte>(new ReadOnlySequence<byte>(buffer));
+        var memory = new ReadOnlySequence<byte>(buffer); 
+        return ParseMessage(ref memory, verify);
+    }
+
+    public AvlMessage ParseMessage(ref ReadOnlySequence<byte> buffer, bool verify = true)
+    {
+        var reader = new SequenceReader<byte>(buffer);
         var header = ReadHeader(ref reader);
 
         if (!CodecParsers.TryGetValue(header.CodecId, out var parser))
