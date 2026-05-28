@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Teltonika.AVL.AspNetCore\Teltonika.AVL.AspNetCore.csproj" />
+    <ProjectReference Include="..\Teltonika.AVL\Teltonika.AVL.csproj" />
+    <ProjectReference Include="..\Teltonika.AVL.Abstractions\Teltonika.AVL.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

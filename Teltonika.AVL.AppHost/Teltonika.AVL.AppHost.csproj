@@ -1,0 +1,16 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.1.2">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Teltonika.AVL.Server\Teltonika.AVL.Server.csproj" />
+    <ProjectReference Include="..\Teltonika.AVL.Simulator\Teltonika.AVL.Simulator.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>e406ee9d-cd4f-4cab-87c9-57ee6850bc4d</UserSecretsId>
+  </PropertyGroup>
+
+</Project>
