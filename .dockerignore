@@ -1,0 +1,13 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/BenchmarkDotNet.Artifacts
+**/tests
+**/benchmarks
+**/*.user
+**/*.suo
+**/artifacts
+*.md
+LICENSE

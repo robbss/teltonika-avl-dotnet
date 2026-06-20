@@ -1,10 +1,13 @@
 <Solution>
-  <Project Path="Teltonika.AVL.Abstractions/Teltonika.AVL.Abstractions.csproj" />
-  <Project Path="Teltonika.AVL.AppHost/Teltonika.AVL.AppHost.csproj" />
-  <Project Path="Teltonika.AVL.AspNetCore/Teltonika.AVL.AspNetCore.csproj" />
-  <Project Path="Teltonika.AVL.Benchmarks/Teltonika.AVL.Benchmarks.csproj" />
-  <Project Path="Teltonika.AVL.Server/Teltonika.AVL.Server.csproj" />
-  <Project Path="Teltonika.AVL.Simulator/Teltonika.AVL.Simulator.csproj" />
-  <Project Path="Teltonika.AVL.Tests/Teltonika.AVL.Tests.csproj" />
-  <Project Path="Teltonika.AVL/Teltonika.AVL.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/Teltonika.Avl/Teltonika.Avl.csproj" />
+    <Project Path="src/Teltonika.Avl.Elements/Teltonika.Avl.Elements.csproj" />
+  </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Teltonika.Avl.Benchmarks/Teltonika.Avl.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Teltonika.Avl.Tests/Teltonika.Avl.Tests.csproj" />
+    <Project Path="tests/Teltonika.Avl.Elements.Tests/Teltonika.Avl.Elements.Tests.csproj" />
+  </Folder>
 </Solution>
