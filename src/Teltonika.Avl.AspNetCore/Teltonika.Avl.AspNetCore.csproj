@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Teltonika.Avl.AspNetCore</RootNamespace>
+    <AssemblyName>Teltonika.Avl.AspNetCore</AssemblyName>
+    <Description>ASP.NET Core hosting and DI integration for Teltonika AVL device server</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Teltonika.Avl\Teltonika.Avl.csproj" />
+  </ItemGroup>
+
+</Project>

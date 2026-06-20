@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Teltonika.Avl/Teltonika.Avl.csproj" />
     <Project Path="src/Teltonika.Avl.Elements/Teltonika.Avl.Elements.csproj" />
+    <Project Path="src/Teltonika.Avl.AspNetCore/Teltonika.Avl.AspNetCore.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Teltonika.Avl.Benchmarks/Teltonika.Avl.Benchmarks.csproj" />
@@ -9,5 +10,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Teltonika.Avl.Tests/Teltonika.Avl.Tests.csproj" />
     <Project Path="tests/Teltonika.Avl.Elements.Tests/Teltonika.Avl.Elements.Tests.csproj" />
+    <Project Path="tests/Teltonika.Avl.AspNetCore.Tests/Teltonika.Avl.AspNetCore.Tests.csproj" />
   </Folder>
 </Solution>
