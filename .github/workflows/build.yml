@@ -7,7 +7,7 @@ on:
       - release-*
     tags:
       - v*
-  
+
   pull_request:
     branches:
       - master
@@ -21,11 +21,11 @@ jobs:
       NUPKG_OUTDIR: bin/Release/nugets
     steps:
       - uses: actions/checkout@v1
-      
+
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.x
 
       - name: Build
         run: dotnet build --configuration Release
@@ -47,7 +47,7 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.x
       - name: Build
         run: dotnet build --configuration Release /p:GITHUB_ACTIONS=false
       - name: Test
@@ -60,7 +60,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: ['build', 'test']
+    needs: ["build", "test"]
     runs-on: ubuntu-latest
     if: startswith(github.ref, 'refs/tags/v') && !(endsWith(github.ref, '-rc') || endsWith(github.ref, '-dev') || endsWith(github.ref, '-prerelease'))
     steps:
