@@ -250,10 +250,10 @@ internal static partial class IoElementCatalog
             [335] = Def(335, "BLE 1 Custom 5", IoDataType.Hex, 0, group: "BLE Sensors"),
             [380] = Def(380, "Digital Output 4", IoDataType.Boolean, 1, group: "Permanent"),
             [381] = Def(381, "Ground Speed", IoDataType.Unsigned, 2, units: "km/h", group: "Permanent"),
-            [385] = Def(385, "BLE Beacon RSSI 1", IoDataType.Signed, 2, units: "dBm", group: "BLE Sensors"),
-            [386] = Def(386, "BLE Beacon RSSI 2", IoDataType.Signed, 2, units: "dBm", group: "BLE Sensors"),
-            [387] = Def(387, "BLE Beacon RSSI 3", IoDataType.Signed, 2, units: "dBm", group: "BLE Sensors"),
-            [388] = Def(388, "BLE Beacon RSSI 4", IoDataType.Signed, 2, units: "dBm", group: "BLE Sensors"),
+            [385] = Def(385, "Beacon", IoDataType.Hex, 0, group: "BLE Sensors",
+                description: "Simple-mode beacon list; decode with BeaconParser.ParseBeaconList"),
+            [387] = Def(387, "ISO6709 Coordinates", IoDataType.Hex, 34, group: "Permanent"),
+            [388] = Def(388, "Module ID", IoDataType.Hex, 17, group: "Permanent"),
             [389] = Def(389, "OBD Fuel Type", IoDataType.Unsigned, 1, group: "OBD",
                 enumValues: new Dictionary<int, string>
                 {
@@ -275,6 +275,8 @@ internal static partial class IoElementCatalog
             [449] = Def(449, "User ID", IoDataType.Ascii, 0, group: "Permanent"),
             [463] = Def(463, "Manual GNSS Latitude", IoDataType.Signed, 4, multiplier: 0.0000001, units: "°", group: "Permanent"),
             [464] = Def(464, "Manual GNSS Longitude", IoDataType.Signed, 4, multiplier: 0.0000001, units: "°", group: "Permanent"),
+            [548] = Def(548, "Advanced BLE Beacon Data", IoDataType.Hex, 0, group: "Permanent",
+                description: "Advanced-mode beacon data; decode with BeaconParser.ParseAdvancedBeacons"),
 
             // Model-specific elements (limited SupportedModels)
             [242] = Def(242, "ManDown/FallDown", IoDataType.Unsigned, 1, group: "Eventual",
