@@ -9,79 +9,97 @@ public sealed class Codec8ExtendedEncoder : IDataCodecEncoder
 
     public byte[] EncodeDataPacket(AvlPacket packet)
     {
-        var dataField = BuildDataField(packet);
-        return PacketFramer.Frame(dataField);
-    }
+        int dataLength = MeasureDataField(packet);
+        var buffer = PacketFramer.AllocatePacket(dataLength);
+        var writer = new SpanWriter(buffer.AsSpan(8, dataLength));
 
-    private static byte[] BuildDataField(AvlPacket packet)
-    {
-        using var ms = new MemoryStream();
-        ms.WriteByte(0x8E);
-        ms.WriteByte((byte)packet.Records.Count);
+        writer.WriteByte(0x8E);
+        writer.WriteByte((byte)packet.Records.Count);
 
         foreach (var record in packet.Records)
-            WriteRecord(ms, record);
+            WriteRecord(ref writer, record);
 
-        ms.WriteByte((byte)packet.Records.Count);
-        return ms.ToArray();
+        writer.WriteByte((byte)packet.Records.Count);
+
+        PacketFramer.SealPacket(buffer);
+        return buffer;
     }
 
-    private static void WriteRecord(MemoryStream ms, AvlRecord record)
+    private static int MeasureDataField(AvlPacket packet)
     {
-        Codec8Encoder.WriteInt64BE(ms, record.Timestamp.ToUnixTimeMilliseconds());
-        ms.WriteByte((byte)record.Priority);
-        Codec8Encoder.WriteGps(ms, record.Gps);
-        WriteIoElement(ms, record.IoData);
-    }
-
-    private static void WriteIoElement(MemoryStream ms, IoElement io)
-    {
-        Codec8Encoder.WriteUInt16BE(ms, io.EventId);
-
-        var group1 = new List<IoProperty>();
-        var group2 = new List<IoProperty>();
-        var group4 = new List<IoProperty>();
-        var group8 = new List<IoProperty>();
-        var groupVar = new List<IoProperty>();
-
-        foreach (var prop in io.Properties)
+        int size = 3; // codec id + record count x2
+        foreach (var record in packet.Records)
         {
-            switch (prop.Value.Length)
+            size += 24; // timestamp + priority + gps
+            size += 4 + 10; // event id + total count + 5 group counts
+            foreach (var prop in record.IoData.Properties)
             {
-                case 1: group1.Add(prop); break;
-                case 2: group2.Add(prop); break;
-                case 4: group4.Add(prop); break;
-                case 8: group8.Add(prop); break;
-                default: groupVar.Add(prop); break;
+                int length = prop.Value.Length;
+                size += 2 + length;
+                if (length is not (1 or 2 or 4 or 8))
+                    size += 2; // variable-length group entries carry a length prefix
             }
         }
-
-        Codec8Encoder.WriteUInt16BE(ms, (ushort)io.Properties.Count);
-        WriteIoGroup(ms, group1);
-        WriteIoGroup(ms, group2);
-        WriteIoGroup(ms, group4);
-        WriteIoGroup(ms, group8);
-        WriteVariableLengthGroup(ms, groupVar);
+        return size;
     }
 
-    private static void WriteIoGroup(MemoryStream ms, List<IoProperty> group)
+    private static void WriteRecord(ref SpanWriter writer, AvlRecord record)
     {
-        Codec8Encoder.WriteUInt16BE(ms, (ushort)group.Count);
-        foreach (var prop in group)
+        writer.WriteInt64(record.Timestamp.ToUnixTimeMilliseconds());
+        writer.WriteByte((byte)record.Priority);
+        Codec8Encoder.WriteGps(ref writer, record.Gps);
+        WriteIoElement(ref writer, record.IoData);
+    }
+
+    private static void WriteIoElement(ref SpanWriter writer, IoElement io)
+    {
+        writer.WriteUInt16(io.EventId);
+        writer.WriteUInt16((ushort)io.Properties.Count);
+        WriteIoGroup(ref writer, io, 1);
+        WriteIoGroup(ref writer, io, 2);
+        WriteIoGroup(ref writer, io, 4);
+        WriteIoGroup(ref writer, io, 8);
+        WriteVariableLengthGroup(ref writer, io);
+    }
+
+    private static void WriteIoGroup(ref SpanWriter writer, IoElement io, int valueSize)
+    {
+        int count = 0;
+        foreach (var prop in io.Properties)
         {
-            Codec8Encoder.WriteUInt16BE(ms, prop.Id);
-            ms.Write(prop.Value.Span);
+            if (prop.Value.Length == valueSize)
+                count++;
+        }
+
+        writer.WriteUInt16((ushort)count);
+        foreach (var prop in io.Properties)
+        {
+            if (prop.Value.Length != valueSize)
+                continue;
+
+            writer.WriteUInt16(prop.Id);
+            writer.WriteBytes(prop.Value.Span);
         }
     }
 
-    private static void WriteVariableLengthGroup(MemoryStream ms, List<IoProperty> group)
+    private static void WriteVariableLengthGroup(ref SpanWriter writer, IoElement io)
     {
-        Codec8Encoder.WriteUInt16BE(ms, (ushort)group.Count);
-        foreach (var prop in group)
+        int count = 0;
+        foreach (var prop in io.Properties)
         {
-            Codec8Encoder.WriteUInt16BE(ms, prop.Id);
-            Codec8Encoder.WriteUInt16BE(ms, (ushort)prop.Value.Length);
-            ms.Write(prop.Value.Span);
+            if (prop.Value.Length is not (1 or 2 or 4 or 8))
+                count++;
+        }
+
+        writer.WriteUInt16((ushort)count);
+        foreach (var prop in io.Properties)
+        {
+            if (prop.Value.Length is 1 or 2 or 4 or 8)
+                continue;
+
+            writer.WriteUInt16(prop.Id);
+            writer.WriteUInt16((ushort)prop.Value.Length);
+            writer.WriteBytes(prop.Value.Span);
         }
     }
 }

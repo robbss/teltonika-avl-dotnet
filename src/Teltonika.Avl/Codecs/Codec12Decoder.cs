@@ -8,23 +8,43 @@ internal sealed class Codec12Decoder : ICommandCodecDecoder
 {
     public static readonly Codec12Decoder Instance = new();
 
-    public GprsCommandPacket DecodeCommandPacket(ref SequenceReader<byte> reader)
+    public bool TryDecodeCommandPacket(ref SequenceReader<byte> reader, out GprsCommandPacket? packet, out string? error)
     {
-        reader.TryRead(out byte codecByte);
-        reader.TryRead(out byte commandCount);
+        packet = null;
 
-        reader.TryRead(out byte commandType);
-        reader.TryReadBigEndian(out int commandSize);
+        if (!reader.TryRead(out _) ||
+            !reader.TryRead(out byte commandCount) ||
+            !reader.TryRead(out byte commandType) ||
+            !reader.TryReadBigEndian(out int commandSize))
+        {
+            error = Codec8Decoder.TruncatedError;
+            return false;
+        }
+
+        if (commandSize < 0 || commandSize > reader.Remaining)
+        {
+            error = $"Invalid command size: {commandSize}";
+            return false;
+        }
 
         var commandBytes = new byte[commandSize];
         reader.TryCopyTo(commandBytes);
         reader.Advance(commandSize);
-        string commandText = Encoding.ASCII.GetString(commandBytes);
 
-        reader.TryRead(out byte commandCount2);
+        if (!reader.TryRead(out byte commandCount2))
+        {
+            error = Codec8Decoder.TruncatedError;
+            return false;
+        }
+
         if (commandCount != commandCount2)
-            throw new InvalidDataException($"Command count mismatch: {commandCount} != {commandCount2}");
+        {
+            error = $"Command count mismatch: {commandCount} != {commandCount2}";
+            return false;
+        }
 
-        return new GprsCommandPacket(CodecId.Codec12, commandType, commandText);
+        packet = new GprsCommandPacket(CodecId.Codec12, commandType, Encoding.ASCII.GetString(commandBytes));
+        error = null;
+        return true;
     }
 }

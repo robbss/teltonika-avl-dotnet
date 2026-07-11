@@ -103,9 +103,10 @@ public sealed class DeviceConnection : IAsyncDisposable
                 if (CodecDecoderFactory.IsDataCodec(codecByte))
                 {
                     var decoder = CodecDecoderFactory.GetDataDecoder((CodecId)codecByte);
-                    var packet = decoder.DecodeDataPacket(ref reader);
+                    if (!decoder.TryDecodeDataPacket(ref reader, out var packet, out var decodeError))
+                        throw new InvalidDataException(decodeError);
 
-                    int recordCount = packet.Records.Count;
+                    int recordCount = packet!.Records.Count;
                     var ack = new byte[4];
                     ack[0] = (byte)(recordCount >> 24);
                     ack[1] = (byte)(recordCount >> 16);
@@ -118,8 +119,10 @@ public sealed class DeviceConnection : IAsyncDisposable
                 else if (CodecDecoderFactory.IsCommandCodec(codecByte))
                 {
                     var decoder = CodecDecoderFactory.GetCommandDecoder((CodecId)codecByte);
-                    var command = decoder.DecodeCommandPacket(ref reader);
-                    await onCommandReceived(command);
+                    if (!decoder.TryDecodeCommandPacket(ref reader, out var command, out var decodeError))
+                        throw new InvalidDataException(decodeError);
+
+                    await onCommandReceived(command!);
                 }
 
                 buffer = buffer.Slice(consumed);

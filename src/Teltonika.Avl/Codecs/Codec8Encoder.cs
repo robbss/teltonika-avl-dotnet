@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using Teltonika.Avl.Models;
 using Teltonika.Avl.Protocol;
 
@@ -10,105 +9,85 @@ public sealed class Codec8Encoder : IDataCodecEncoder
 
     public byte[] EncodeDataPacket(AvlPacket packet)
     {
-        var dataField = BuildDataField(packet);
-        return PacketFramer.Frame(dataField);
-    }
+        int dataLength = MeasureDataField(packet);
+        var buffer = PacketFramer.AllocatePacket(dataLength);
+        var writer = new SpanWriter(buffer.AsSpan(8, dataLength));
 
-    private static byte[] BuildDataField(AvlPacket packet)
-    {
-        using var ms = new MemoryStream();
-        ms.WriteByte(0x08);
-        ms.WriteByte((byte)packet.Records.Count);
+        writer.WriteByte(0x08);
+        writer.WriteByte((byte)packet.Records.Count);
 
         foreach (var record in packet.Records)
-            WriteRecord(ms, record);
+            WriteRecord(ref writer, record);
 
-        ms.WriteByte((byte)packet.Records.Count);
-        return ms.ToArray();
+        writer.WriteByte((byte)packet.Records.Count);
+
+        PacketFramer.SealPacket(buffer);
+        return buffer;
     }
 
-    private static void WriteRecord(MemoryStream ms, AvlRecord record)
+    private static int MeasureDataField(AvlPacket packet)
     {
-        WriteInt64BE(ms, record.Timestamp.ToUnixTimeMilliseconds());
-        ms.WriteByte((byte)record.Priority);
-        WriteGps(ms, record.Gps);
-        WriteIoElement(ms, record.IoData);
-    }
-
-    internal static void WriteGps(MemoryStream ms, GpsData gps)
-    {
-        WriteInt32BE(ms, (int)(gps.Longitude * 10_000_000));
-        WriteInt32BE(ms, (int)(gps.Latitude * 10_000_000));
-        WriteInt16BE(ms, gps.Altitude);
-        WriteInt16BE(ms, (short)gps.Angle);
-        ms.WriteByte(gps.Satellites);
-        WriteInt16BE(ms, (short)gps.Speed);
-    }
-
-    private static void WriteIoElement(MemoryStream ms, IoElement io)
-    {
-        ms.WriteByte((byte)io.EventId);
-
-        var group1 = new List<IoProperty>();
-        var group2 = new List<IoProperty>();
-        var group4 = new List<IoProperty>();
-        var group8 = new List<IoProperty>();
-
-        foreach (var prop in io.Properties)
+        int size = 3; // codec id + record count x2
+        foreach (var record in packet.Records)
         {
-            switch (prop.Value.Length)
+            size += 24; // timestamp + priority + gps
+            size += 2 + 4; // event id + total count + 4 group counts
+            foreach (var prop in record.IoData.Properties)
             {
-                case 1: group1.Add(prop); break;
-                case 2: group2.Add(prop); break;
-                case 4: group4.Add(prop); break;
-                case 8: group8.Add(prop); break;
-                default:
-                    throw new ArgumentException($"Codec 8 does not support IO property with value length {prop.Value.Length} (ID={prop.Id}). Use Codec 8 Extended.");
+                int length = prop.Value.Length;
+                if (length is not (1 or 2 or 4 or 8))
+                    throw new ArgumentException($"Codec 8 does not support IO property with value length {length} (ID={prop.Id}). Use Codec 8 Extended.");
+                size += 1 + length;
             }
         }
-
-        ms.WriteByte((byte)io.Properties.Count);
-        WriteIoGroup1Byte(ms, group1);
-        WriteIoGroup1Byte(ms, group2);
-        WriteIoGroup1Byte(ms, group4);
-        WriteIoGroup1Byte(ms, group8);
+        return size;
     }
 
-    private static void WriteIoGroup1Byte(MemoryStream ms, List<IoProperty> group)
+    private static void WriteRecord(ref SpanWriter writer, AvlRecord record)
     {
-        ms.WriteByte((byte)group.Count);
-        foreach (var prop in group)
+        writer.WriteInt64(record.Timestamp.ToUnixTimeMilliseconds());
+        writer.WriteByte((byte)record.Priority);
+        WriteGps(ref writer, record.Gps);
+        WriteIoElement(ref writer, record.IoData);
+    }
+
+    internal static void WriteGps(ref SpanWriter writer, GpsData gps)
+    {
+        writer.WriteInt32((int)(gps.Longitude * 10_000_000));
+        writer.WriteInt32((int)(gps.Latitude * 10_000_000));
+        writer.WriteInt16(gps.Altitude);
+        writer.WriteInt16((short)gps.Angle);
+        writer.WriteByte(gps.Satellites);
+        writer.WriteInt16((short)gps.Speed);
+    }
+
+    private static void WriteIoElement(ref SpanWriter writer, IoElement io)
+    {
+        writer.WriteByte((byte)io.EventId);
+        writer.WriteByte((byte)io.Properties.Count);
+        WriteIoGroup(ref writer, io, 1);
+        WriteIoGroup(ref writer, io, 2);
+        WriteIoGroup(ref writer, io, 4);
+        WriteIoGroup(ref writer, io, 8);
+    }
+
+    private static void WriteIoGroup(ref SpanWriter writer, IoElement io, int valueSize)
+    {
+        int count = 0;
+        foreach (var prop in io.Properties)
         {
-            ms.WriteByte((byte)prop.Id);
-            ms.Write(prop.Value.Span);
+            if (prop.Value.Length == valueSize)
+                count++;
         }
-    }
 
-    internal static void WriteInt64BE(MemoryStream ms, long value)
-    {
-        Span<byte> buf = stackalloc byte[8];
-        BinaryPrimitives.WriteInt64BigEndian(buf, value);
-        ms.Write(buf);
-    }
+        writer.WriteByte((byte)count);
+        foreach (var prop in io.Properties)
+        {
+            if (prop.Value.Length != valueSize)
+                continue;
 
-    internal static void WriteInt32BE(MemoryStream ms, int value)
-    {
-        Span<byte> buf = stackalloc byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(buf, value);
-        ms.Write(buf);
-    }
-
-    internal static void WriteInt16BE(MemoryStream ms, short value)
-    {
-        Span<byte> buf = stackalloc byte[2];
-        BinaryPrimitives.WriteInt16BigEndian(buf, value);
-        ms.Write(buf);
-    }
-
-    internal static void WriteUInt16BE(MemoryStream ms, ushort value)
-    {
-        Span<byte> buf = stackalloc byte[2];
-        BinaryPrimitives.WriteUInt16BigEndian(buf, value);
-        ms.Write(buf);
+            writer.WriteByte((byte)prop.Id);
+            writer.WriteBytes(prop.Value.Span);
+        }
     }
 }

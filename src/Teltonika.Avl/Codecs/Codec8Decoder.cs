@@ -7,80 +7,153 @@ internal sealed class Codec8Decoder : ICodecDecoder
 {
     public static readonly Codec8Decoder Instance = new();
 
-    public AvlPacket DecodeDataPacket(ref SequenceReader<byte> reader)
+    internal const string TruncatedError = "Unexpected end of data field";
+
+    // Valid range of DateTimeOffset.FromUnixTimeMilliseconds
+    private const long MaxUnixTimeMilliseconds = 253_402_300_799_999;
+
+    public bool TryDecodeDataPacket(ref SequenceReader<byte> reader, out AvlPacket? packet, out string? error)
     {
-        reader.TryRead(out byte codecByte);
-        reader.TryRead(out byte recordCount);
+        packet = null;
+
+        if (!reader.TryRead(out _) || !reader.TryRead(out byte recordCount))
+        {
+            error = TruncatedError;
+            return false;
+        }
 
         var records = new AvlRecord[recordCount];
         for (int i = 0; i < recordCount; i++)
-            records[i] = ReadRecord(ref reader);
+        {
+            if (!TryReadRecord(ref reader, out var record, out error))
+                return false;
+            records[i] = record!;
+        }
 
-        reader.TryRead(out byte recordCount2);
+        if (!reader.TryRead(out byte recordCount2))
+        {
+            error = TruncatedError;
+            return false;
+        }
+
         if (recordCount != recordCount2)
-            throw new InvalidDataException($"Record count mismatch: {recordCount} != {recordCount2}");
+        {
+            error = $"Record count mismatch: {recordCount} != {recordCount2}";
+            return false;
+        }
 
-        return new AvlPacket(CodecId.Codec8, records);
+        packet = new AvlPacket(CodecId.Codec8, records);
+        error = null;
+        return true;
     }
 
-    private static AvlRecord ReadRecord(ref SequenceReader<byte> reader)
+    private static bool TryReadRecord(ref SequenceReader<byte> reader, out AvlRecord? record, out string? error)
     {
-        reader.TryReadBigEndian(out long timestampMs);
-        var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(timestampMs);
+        record = null;
 
-        reader.TryRead(out byte priority);
+        if (!TryReadRecordHeader(ref reader, out var timestamp, out var priority, out var gps, out error))
+            return false;
 
-        var gps = ReadGps(ref reader);
-        var io = ReadIoElement(ref reader);
+        if (!TryReadIoElement(ref reader, out var io, out error))
+            return false;
 
-        return new AvlRecord(timestamp, (Priority)priority, gps, io);
+        record = new AvlRecord(timestamp, priority, gps, io!);
+        return true;
     }
 
-    internal static GpsData ReadGps(ref SequenceReader<byte> reader)
+    /// <summary>Reads the timestamp, priority, and GPS element shared by all data codecs.</summary>
+    internal static bool TryReadRecordHeader(
+        ref SequenceReader<byte> reader,
+        out DateTimeOffset timestamp,
+        out Priority priority,
+        out GpsData gps,
+        out string? error)
     {
-        reader.TryReadBigEndian(out int longitude);
-        reader.TryReadBigEndian(out int latitude);
-        reader.TryReadBigEndian(out short altitude);
-        reader.TryReadBigEndian(out short angleRaw);
-        ushort angle = (ushort)angleRaw;
-        reader.TryRead(out byte satellites);
-        reader.TryReadBigEndian(out short speedRaw);
-        ushort speed = (ushort)speedRaw;
+        timestamp = default;
+        priority = default;
+        gps = default;
 
-        return new GpsData(
+        if (!reader.TryReadBigEndian(out long timestampMs) || !reader.TryRead(out byte priorityByte))
+        {
+            error = TruncatedError;
+            return false;
+        }
+
+        if (timestampMs is < 0 or > MaxUnixTimeMilliseconds)
+        {
+            error = $"Invalid record timestamp: {timestampMs}";
+            return false;
+        }
+
+        if (!reader.TryReadBigEndian(out int longitude) ||
+            !reader.TryReadBigEndian(out int latitude) ||
+            !reader.TryReadBigEndian(out short altitude) ||
+            !reader.TryReadBigEndian(out short angleRaw) ||
+            !reader.TryRead(out byte satellites) ||
+            !reader.TryReadBigEndian(out short speedRaw))
+        {
+            error = TruncatedError;
+            return false;
+        }
+
+        timestamp = DateTimeOffset.FromUnixTimeMilliseconds(timestampMs);
+        priority = (Priority)priorityByte;
+        gps = new GpsData(
             longitude / 10_000_000.0,
             latitude / 10_000_000.0,
             altitude,
-            angle,
+            (ushort)angleRaw,
             satellites,
-            speed);
+            (ushort)speedRaw);
+        error = null;
+        return true;
     }
 
-    private static IoElement ReadIoElement(ref SequenceReader<byte> reader)
+    private static bool TryReadIoElement(ref SequenceReader<byte> reader, out IoElement? io, out string? error)
     {
-        reader.TryRead(out byte eventId);
-        reader.TryRead(out byte totalCount);
+        io = null;
+
+        if (!reader.TryRead(out byte eventId) || !reader.TryRead(out byte totalCount))
+        {
+            error = TruncatedError;
+            return false;
+        }
 
         var properties = new List<IoProperty>(totalCount);
 
-        ReadIoGroup(ref reader, 1, properties);
-        ReadIoGroup(ref reader, 2, properties);
-        ReadIoGroup(ref reader, 4, properties);
-        ReadIoGroup(ref reader, 8, properties);
+        if (!TryReadIoGroup(ref reader, 1, properties, out error) ||
+            !TryReadIoGroup(ref reader, 2, properties, out error) ||
+            !TryReadIoGroup(ref reader, 4, properties, out error) ||
+            !TryReadIoGroup(ref reader, 8, properties, out error))
+        {
+            return false;
+        }
 
-        return new IoElement(eventId, properties);
+        io = new IoElement(eventId, properties);
+        return true;
     }
 
-    private static void ReadIoGroup(ref SequenceReader<byte> reader, int valueSize, List<IoProperty> properties)
+    private static bool TryReadIoGroup(ref SequenceReader<byte> reader, int valueSize, List<IoProperty> properties, out string? error)
     {
-        reader.TryRead(out byte count);
+        if (!reader.TryRead(out byte count))
+        {
+            error = TruncatedError;
+            return false;
+        }
+
         for (int i = 0; i < count; i++)
         {
-            reader.TryRead(out byte id);
             var value = new byte[valueSize];
-            reader.TryCopyTo(value);
+            if (!reader.TryRead(out byte id) || !reader.TryCopyTo(value))
+            {
+                error = TruncatedError;
+                return false;
+            }
             reader.Advance(valueSize);
             properties.Add(new IoProperty(id, value));
         }
+
+        error = null;
+        return true;
     }
 }

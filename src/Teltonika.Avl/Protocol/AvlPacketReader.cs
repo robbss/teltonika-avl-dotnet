@@ -9,15 +9,38 @@ public static class AvlPacketReader
     private const int CrcSize = 4;
     private const int HeaderSize = PreambleSize + DataLengthSize;
 
+    /// <summary>
+    /// Reads one framed packet. Returns false when more data is needed;
+    /// throws <see cref="InvalidDataException"/> when the buffered data is corrupt.
+    /// </summary>
     public static bool TryReadPacket(
         in ReadOnlySequence<byte> buffer,
         out ReadOnlySequence<byte> dataField,
         out SequencePosition consumed,
         out SequencePosition examined)
     {
+        if (TryReadPacket(in buffer, out dataField, out consumed, out examined, out var error))
+            return true;
+
+        return error is null ? false : throw new InvalidDataException(error);
+    }
+
+    /// <summary>
+    /// Reads one framed packet without throwing. Returns false with <paramref name="error"/>
+    /// set when the buffered data is corrupt (bad preamble, length, or CRC), or with
+    /// <paramref name="error"/> null when more data is needed.
+    /// </summary>
+    public static bool TryReadPacket(
+        in ReadOnlySequence<byte> buffer,
+        out ReadOnlySequence<byte> dataField,
+        out SequencePosition consumed,
+        out SequencePosition examined,
+        out string? error)
+    {
         dataField = default;
         consumed = buffer.Start;
         examined = buffer.End;
+        error = null;
 
         if (buffer.Length < HeaderSize + CrcSize)
             return false;
@@ -27,12 +50,18 @@ public static class AvlPacketReader
         // Read and verify preamble (4 zero bytes)
         reader.TryReadBigEndian(out int preamble);
         if (preamble != 0)
-            throw new InvalidDataException("Invalid preamble: expected 0x00000000");
+        {
+            error = "Invalid preamble: expected 0x00000000";
+            return false;
+        }
 
         // Read data field length
         reader.TryReadBigEndian(out int dataLength);
         if (dataLength <= 0)
-            throw new InvalidDataException($"Invalid data length: {dataLength}");
+        {
+            error = $"Invalid data length: {dataLength}";
+            return false;
+        }
 
         long totalPacketSize = HeaderSize + dataLength + CrcSize;
         if (buffer.Length < totalPacketSize)
@@ -50,7 +79,11 @@ public static class AvlPacketReader
         ushort expectedCrc = (ushort)(packetCrc & 0xFFFF);
 
         if (computedCrc != expectedCrc)
-            throw new InvalidDataException($"CRC mismatch: computed 0x{computedCrc:X4}, expected 0x{expectedCrc:X4}");
+        {
+            dataField = default;
+            error = $"CRC mismatch: computed 0x{computedCrc:X4}, expected 0x{expectedCrc:X4}";
+            return false;
+        }
 
         consumed = buffer.GetPosition(totalPacketSize);
         examined = consumed;

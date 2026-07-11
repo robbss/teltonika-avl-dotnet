@@ -1,4 +1,3 @@
-using System.Text;
 using Teltonika.Avl.Models;
 using Teltonika.Avl.Protocol;
 
@@ -10,20 +9,23 @@ public sealed class Codec13Encoder : ICommandCodecEncoder
 
     public byte[] EncodeCommandPacket(GprsCommandPacket command)
     {
-        var commandBytes = Encoding.ASCII.GetBytes(command.CommandText);
         int timestampSeconds = command.Timestamp.HasValue
             ? (int)command.Timestamp.Value.ToUnixTimeSeconds()
             : (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        using var ms = new MemoryStream();
-        ms.WriteByte(0x0D);
-        ms.WriteByte(0x01);
-        ms.WriteByte(command.CommandType);
-        Codec8Encoder.WriteInt32BE(ms, timestampSeconds);
-        Codec8Encoder.WriteInt32BE(ms, commandBytes.Length);
-        ms.Write(commandBytes);
-        ms.WriteByte(0x01);
+        int dataLength = 12 + command.CommandText.Length; // codec + qty + type + timestamp + size + command + qty
+        var buffer = PacketFramer.AllocatePacket(dataLength);
+        var writer = new SpanWriter(buffer.AsSpan(8, dataLength));
 
-        return PacketFramer.Frame(ms.ToArray());
+        writer.WriteByte(0x0D);
+        writer.WriteByte(0x01);
+        writer.WriteByte(command.CommandType);
+        writer.WriteInt32(timestampSeconds);
+        writer.WriteInt32(command.CommandText.Length);
+        writer.WriteAscii(command.CommandText);
+        writer.WriteByte(0x01);
+
+        PacketFramer.SealPacket(buffer);
+        return buffer;
     }
 }

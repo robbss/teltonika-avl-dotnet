@@ -5,10 +5,18 @@ namespace Teltonika.Avl.Codecs;
 
 internal interface ICodecDecoder
 {
-    AvlPacket DecodeDataPacket(ref SequenceReader<byte> reader);
+    /// <summary>
+    /// Decodes a data packet without throwing. Returns false with a diagnostic
+    /// <paramref name="error"/> when the data field is malformed.
+    /// </summary>
+    bool TryDecodeDataPacket(ref SequenceReader<byte> reader, out AvlPacket? packet, out string? error);
 }
 
 internal interface ICommandCodecDecoder
 {
-    GprsCommandPacket DecodeCommandPacket(ref SequenceReader<byte> reader);
+    /// <summary>
+    /// Decodes a GPRS command packet without throwing. Returns false with a diagnostic
+    /// <paramref name="error"/> when the data field is malformed.
+    /// </summary>
+    bool TryDecodeCommandPacket(ref SequenceReader<byte> reader, out GprsCommandPacket? packet, out string? error);
 }

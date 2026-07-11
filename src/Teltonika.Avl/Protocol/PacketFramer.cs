@@ -26,6 +26,24 @@ public static class PacketFramer
         return buffer;
     }
 
+    /// <summary>
+    /// Allocates a full packet buffer with the length header written; the caller fills
+    /// the data field at offset 8 and then calls <see cref="SealPacket"/> to write the CRC.
+    /// </summary>
+    internal static byte[] AllocatePacket(int dataFieldLength)
+    {
+        var buffer = new byte[4 + 4 + dataFieldLength + 4];
+        BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(4), dataFieldLength);
+        return buffer;
+    }
+
+    internal static void SealPacket(byte[] packet)
+    {
+        int dataLength = packet.Length - 12;
+        ushort crc = Crc16Ibm.Compute(packet.AsSpan(8, dataLength));
+        BinaryPrimitives.WriteInt32BigEndian(packet.AsSpan(8 + dataLength), crc);
+    }
+
     public static byte[] EncodeImeiFrame(string imei)
     {
         var imeiBytes = Encoding.ASCII.GetBytes(imei);
