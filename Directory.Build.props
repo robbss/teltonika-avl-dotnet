@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildThisFileDirectory)\properties\teltonika_avl_nuget.props" />
 
   <PropertyGroup>
-    <TargetFramework>net10</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputPath>$(RepoRoot)bin\$(Configuration)\prod\$(MSBuildProjectName)\</OutputPath>
     <DocumentationFile>$(OutputPath)$(MSBuildProjectName).xml</DocumentationFile>
   </PropertyGroup>

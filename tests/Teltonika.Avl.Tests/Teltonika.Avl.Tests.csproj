@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Teltonika.Avl\Teltonika.Avl.csproj" />
-    <ProjectReference Include="..\..\src\Teltonika.Simulator\Teltonika.Simulator.csproj" />
   </ItemGroup>
 
 </Project>

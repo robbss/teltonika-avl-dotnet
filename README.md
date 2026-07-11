@@ -9,16 +9,15 @@ A .NET 10 library for parsing, encoding, and serving [Teltonika](https://teltoni
 - **TCP server** &mdash; Production-ready async server with IMEI validation, idle timeouts, and bidirectional GPRS commands
 - **IO element resolution** &mdash; Translate raw IO property IDs into named, typed values with units, using a built-in catalog of 150+ definitions across 78 tracker models
 - **Per-model overrides** &mdash; Handles cases where the same AVL ID has different meanings on different hardware (e.g. ID 389 is "OBD Fuel Type" on FMB devices but "Button Click" on TMT250)
-- **Device simulator** &mdash; A CLI tool that simulates a Teltonika tracker for integration testing
-- **Zero allocations where possible** &mdash; `ReadOnlySpan<byte>` and `ReadOnlySequence<byte>` APIs, `FrozenDictionary` lookups
+- **Beacon parsing** &mdash; Decode iBeacon/Eddystone beacon lists (AVL ID 385) and advanced beacon data (AVL ID 548)
+- **Low allocation** &mdash; Copy-free `byte[]`/`ReadOnlyMemory<byte>`/`ReadOnlySequence<byte>` parse overloads, single-allocation encoders, `FrozenDictionary` lookups
 
 ## Projects
 
 | Project | Description |
 |---|---|
 | `Teltonika.Avl` | Core parser, encoder, and TCP server |
-| `Teltonika.Avl.Elements` | IO element catalog and property resolver |
-| `Teltonika.Simulator` | CLI device simulator for testing |
+| `Teltonika.Avl.Elements` | IO element catalog, property resolver, and beacon parser |
 
 ## Installation
 
@@ -26,7 +25,7 @@ Clone and build from source:
 
 ```bash
 git clone <repo-url>
-cd teltonika-avl-dotnet-new
+cd teltonika-avl-dotnet
 dotnet build
 ```
 
@@ -62,6 +61,8 @@ if (AvlParser.TryParse(raw, out var packet))
     // valid packet
 }
 ```
+
+`Parse`, `TryParse`, `ParseCommand`, and `ParseImei` accept `byte[]`, `ReadOnlyMemory<byte>`, and `ReadOnlySequence<byte>` without copying the input; the `ReadOnlySpan<byte>` overloads copy the span into a temporary buffer first.
 
 ### Parsing commands and IMEI frames
 
@@ -251,6 +252,61 @@ The resolver returns typed values based on the element definition:
 | Hex | `string` (colon-separated) | iButton: `"01:23:45:67:89:AB:CD:EF"` |
 | Ascii | `string` | VIN: `"WVWZZZ3CZWE123456"` |
 
+## Beacon Parsing
+
+Devices with Bluetooth® report nearby BLE beacons through two variable-length IO elements (Codec 8 Extended): AVL ID 385 in simple beacon mode and AVL ID 548 in advanced beacon mode. `BeaconParser` decodes both.
+
+### Simple mode (AVL ID 385)
+
+```csharp
+using Teltonika.Avl.Elements.Beacons;
+
+AvlPacket packet = AvlParser.Parse(raw);
+
+foreach (var record in packet.Records)
+{
+    BeaconList? list = BeaconParser.GetBeacons(record.IoData);
+    if (list is null)
+        continue; // record carries no beacon list
+
+    Console.WriteLine($"Part {list.CurrentPart}/{list.TotalParts}, {list.Beacons.Count} beacons");
+
+    foreach (var beacon in list.Beacons)
+    {
+        switch (beacon)
+        {
+            case IBeacon ib:
+                Console.WriteLine($"  iBeacon {ib.Uuid} major={ib.Major} minor={ib.Minor} rssi={ib.Rssi} dBm");
+                break;
+            case Eddystone es:
+                Console.WriteLine($"  Eddystone ns={Convert.ToHexString(es.Namespace.Span)} " +
+                                  $"instance={Convert.ToHexString(es.InstanceId.Span)} rssi={es.Rssi} dBm");
+                break;
+        }
+
+        // EYE beacons can also report battery voltage (mV) and temperature (°C)
+        if (beacon.BatteryVoltage is { } mv)
+            Console.WriteLine($"    battery: {mv} mV, temperature: {beacon.Temperature} °C");
+    }
+}
+```
+
+The raw payload of a single property can also be parsed directly with `BeaconParser.ParseBeaconList(property.Value)` or the non-throwing `TryParseBeaconList`.
+
+### Advanced mode (AVL ID 548)
+
+In advanced mode the beacon ID and additional data layout follow the device's *Beacon Capturing Configuration*, so they are exposed as raw bytes:
+
+```csharp
+IReadOnlyList<AdvancedBeacon>? beacons = BeaconParser.GetAdvancedBeacons(record.IoData);
+
+foreach (var beacon in beacons ?? [])
+{
+    Console.WriteLine($"RSSI {beacon.Rssi} dBm, ID {Convert.ToHexString(beacon.BeaconId.Span)}, " +
+                      $"{beacon.AdditionalData.Length} bytes additional data");
+}
+```
+
 ## Supported Tracker Models
 
 78 models across all Teltonika product lines:
@@ -261,169 +317,6 @@ The resolver returns typed values based on the element definition:
 - **FMM** &mdash; FMM001, FMM003, FMM125, FMM130, FMM150, FMM230, FMM640, FMM650, FMM800, FMM880
 - **FMU** &mdash; FMU125, FMU126, FMU130
 - **Other** &mdash; FMT100, TAT100, TAT140, TAT240, TST100, TMT250, GH5200, TFT100
-
-## Device Simulator
-
-The `Teltonika.Simulator` project is a CLI tool that simulates a Teltonika tracker, useful for integration testing without physical hardware.
-
-### Random walk mode
-
-```bash
-dotnet run --project src/Teltonika.Simulator
-```
-
-### Commute profile mode
-
-Simulate realistic daily commutes with route-following. Addresses are geocoded via [Nominatim](https://nominatim.openstreetmap.org/) and routes are planned via [OSRM](http://project-osrm.org/) — no API keys required.
-
-Create a profile JSON file:
-
-```json
-{
-  "server": {
-    "host": "127.0.0.1",
-    "port": 5027
-  },
-  "defaults": {
-    "codec": "8e",
-    "sendIntervalSeconds": 10,
-    "timeAcceleration": 60,
-    "drivingSpeedKmh": 50,
-    "parkingIntervalSeconds": 300
-  },
-  "devices": [
-    {
-      "imei": "356307042441013",
-      "homeAddress": "Gedimino pr. 1, Vilnius",
-      "workAddress": "Konstitucijos pr. 7, Vilnius",
-      "workStartHour": 8.5,
-      "workEndHour": 17.0,
-      "departureVarianceMinutes": 15
-    }
-  ]
-}
-```
-
-Run with the profile:
-
-```bash
-dotnet run --project src/Teltonika.Simulator -- --profile commute.json
-```
-
-Each device follows a daily cycle: **AtHome** (parked) &rarr; **DrivingToWork** (following real road route) &rarr; **AtWork** (parked) &rarr; **DrivingHome** &rarr; repeat. Time acceleration lets you run an 8-hour workday in ~8 real minutes (`timeAcceleration: 60`). Routes are cached in a `.routes.json` file alongside the profile to avoid repeated API calls.
-
-| Field | Description |
-|---|---|
-| `timeAcceleration` | 1 real second = N simulated seconds (60 = 1 min/sec) |
-| `workStartHour` / `workEndHour` | Decimal hours (8.5 = 08:30) |
-| `departureVarianceMinutes` | Random daily jitter on departure times |
-| `drivingSpeedKmh` | Base driving speed (±10% random variation) |
-| `parkingIntervalSeconds` | How often to send stationary pings (simulated time) |
-
-Multiple devices run in parallel, each on its own TCP connection.
-
-### Programmatic usage
-
-Use the simulator programmatically:
-
-```csharp
-using Teltonika.Avl.Models;
-using Teltonika.Simulator;
-
-var device = new SimulatedDevice(new SimulatorOptions
-{
-    Imei = "356307042441013",
-    Host = "127.0.0.1",
-    Port = 5027,
-    DataCodec = CodecId.Codec8Extended,
-    SendInterval = TimeSpan.FromSeconds(10),
-    InitialLatitude = 54.6993,
-    InitialLongitude = 25.2616,
-});
-
-await device.ConnectAsync();
-
-// Send a single record with simulated GPS data
-var gps = new GpsSimulator(54.6993, 25.2616);
-var record = new AvlRecord(
-    DateTimeOffset.UtcNow,
-    Priority.Low,
-    gps.Next(),
-    new IoElement(0, Array.Empty<IoProperty>()));
-
-int ack = await device.SendRecordAsync(record);
-Console.WriteLine($"Server acknowledged {ack} record(s)");
-
-// Listen for commands from the server
-var command = await device.ReceiveCommandAsync();
-if (command is not null)
-{
-    Console.WriteLine($"Received command: {command.CommandText}");
-    await device.SendCommandResponseAsync("OK");
-}
-
-await device.DisposeAsync();
-```
-
-## Docker
-
-The simulator ships with a Dockerfile for containerized deployment.
-
-### Build the image
-
-```bash
-docker build -t teltonika-simulator .
-```
-
-### Run with environment variables
-
-```bash
-# Random walk mode
-docker run --rm \
-  -e SIMULATOR_HOST=192.168.1.100 \
-  -e SIMULATOR_PORT=5027 \
-  -e SIMULATOR_IMEI=356307042441013 \
-  teltonika-simulator
-
-# Profile mode with a mounted profile
-docker run --rm \
-  -e SIMULATOR_PROFILE=/profiles/commute.json \
-  -e SIMULATOR_HOST=192.168.1.100 \
-  -v ./profiles:/profiles \
-  teltonika-simulator
-```
-
-### Environment variables
-
-All settings can be configured via environment variables. CLI args take priority over env vars.
-
-| Variable | Description | Default |
-|---|---|---|
-| `SIMULATOR_PROFILE` | Path to commute profile JSON | _(none)_ |
-| `SIMULATOR_HOST` | Server host | `127.0.0.1` |
-| `SIMULATOR_PORT` | Server port | `5027` |
-| `SIMULATOR_IMEI` | Device IMEI | `356307042441013` |
-| `SIMULATOR_CODEC` | Codec: `8`, `8e`, `16` | `8e` |
-| `SIMULATOR_INTERVAL` | Send interval (seconds) | `10` |
-| `SIMULATOR_COUNT` | Packets to send, `0` = infinite | `0` |
-| `SIMULATOR_LAT` | Initial latitude | `54.6993` |
-| `SIMULATOR_LON` | Initial longitude | `25.2616` |
-
-### Docker Compose
-
-```yaml
-services:
-  simulator:
-    build: .
-    environment:
-      SIMULATOR_PROFILE: /profiles/commute.json
-      SIMULATOR_HOST: host.docker.internal
-      SIMULATOR_PORT: "5027"
-    volumes:
-      - ./profiles:/profiles
-```
-
-Route cache files are written alongside the profile JSON, so mounting the profiles directory as a volume preserves cached routes across container restarts.
 
 ## Benchmarks
 
