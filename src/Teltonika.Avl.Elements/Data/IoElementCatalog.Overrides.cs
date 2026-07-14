@@ -33,6 +33,14 @@ internal static partial class IoElementCatalog
             Def(13, "Battery Current", IoDataType.Unsigned, 2, units: "mA", group: "Permanent",
                 supportedModels: fm63Models));
 
+        // ID 217: "OBD Protocol" on most models, but "RFID COM2" (card ID from an
+        // RS-232 reader on COM2) on the FMx640 family
+        var fm64Models = new[] { TrackerModel.FMB640, TrackerModel.FMC640, TrackerModel.FMM640 }.ToFrozenSet();
+
+        AddOverrides(overrides, 217, fm64Models,
+            Def(217, "RFID COM2", IoDataType.Unsigned, 8, group: "Eventual",
+                supportedModels: fm64Models));
+
         // IDs 246, 252: 1-byte Boolean on most models, but 2-byte Unsigned on FMC003
         var fmc003 = new[] { TrackerModel.FMC003 }.ToFrozenSet();
 
