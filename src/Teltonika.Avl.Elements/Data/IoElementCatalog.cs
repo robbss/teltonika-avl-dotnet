@@ -31,7 +31,7 @@ internal static partial class IoElementCatalog
             [4] = Def(4, "Digital Input 4", IoDataType.Boolean, 1, group: "Permanent"),
             [9] = Def(9, "Analog Input 1", IoDataType.Unsigned, 2, units: "mV", group: "Permanent"),
             [10] = Def(10, "SD Status", IoDataType.Unsigned, 1, group: "Permanent"),
-            [11] = Def(11, "ICCID1", IoDataType.Unsigned, 4, group: "Permanent"),
+            [11] = Def(11, "ICCID1", IoDataType.Unsigned, 8, group: "Permanent"),
             [12] = Def(12, "Fuel Used GPS", IoDataType.Unsigned, 4, units: "ml", group: "Permanent"),
             [13] = Def(13, "Average Fuel Use", IoDataType.Unsigned, 2, multiplier: 0.01, units: "l/100km", group: "Permanent"),
             [14] = Def(14, "Fuel Rate GPS", IoDataType.Unsigned, 2, multiplier: 0.1, units: "l/h", group: "Permanent"),
@@ -47,7 +47,14 @@ internal static partial class IoElementCatalog
             [67] = Def(67, "Battery Voltage", IoDataType.Unsigned, 2, units: "mV", group: "Permanent"),
             [68] = Def(68, "Battery Current", IoDataType.Unsigned, 2, units: "mA", group: "Permanent"),
             [69] = Def(69, "GNSS Status", IoDataType.Unsigned, 1, group: "Permanent",
-                enumValues: new Dictionary<int, string> { [0] = "Off", [1] = "On, No Fix", [2] = "On, Fix 2D", [3] = "On, Fix 3D" }),
+                enumValues: new Dictionary<int, string>
+                {
+                    [0] = "Off",
+                    [1] = "On, Fix",
+                    [2] = "On, No Fix",
+                    [3] = "Sleep",
+                    [4] = "On, Fix, Invalid Data"
+                }),
             [72] = Def(72, "Dallas Temperature 1", IoDataType.Signed, 4, multiplier: 0.1, units: "°C", group: "Permanent"),
             [73] = Def(73, "Dallas Temperature 2", IoDataType.Signed, 4, multiplier: 0.1, units: "°C", group: "Permanent"),
             [74] = Def(74, "Dallas Temperature 3", IoDataType.Signed, 4, multiplier: 0.1, units: "°C", group: "Permanent"),
@@ -64,13 +71,20 @@ internal static partial class IoElementCatalog
             [175] = Def(175, "Auto Geofence", IoDataType.Boolean, 1, group: "Eventual"),
             [176] = Def(176, "Moving", IoDataType.Boolean, 1, group: "Eventual", description: "Duplicate of ID 240"),
             [178] = Def(178, "Digital Output 1", IoDataType.Boolean, 1, group: "Permanent"),
-            [179] = Def(179, "Digital Output 2", IoDataType.Boolean, 1, group: "Permanent"),
-            [180] = Def(180, "Digital Output 3", IoDataType.Boolean, 1, group: "Permanent"),
+            [179] = Def(179, "Digital Output 1", IoDataType.Boolean, 1, group: "Permanent"),
+            [180] = Def(180, "Digital Output 2", IoDataType.Boolean, 1, group: "Permanent"),
             [181] = Def(181, "GNSS PDOP", IoDataType.Unsigned, 2, multiplier: 0.1, group: "Permanent"),
             [182] = Def(182, "GNSS HDOP", IoDataType.Unsigned, 2, multiplier: 0.1, group: "Permanent"),
             [199] = Def(199, "Trip Odometer", IoDataType.Unsigned, 4, units: "m", group: "Eventual"),
-            [200] = Def(200, "Deep Sleep", IoDataType.Unsigned, 1, group: "Permanent",
-                enumValues: new Dictionary<int, string> { [0] = "Disabled", [1] = "Deep Sleep", [2] = "Online Deep Sleep", [3] = "Ultra Deep Sleep" }),
+            [200] = Def(200, "Sleep Mode", IoDataType.Unsigned, 1, group: "Permanent",
+                enumValues: new Dictionary<int, string>
+                {
+                    [0] = "No Sleep",
+                    [1] = "GPS Sleep",
+                    [2] = "Deep Sleep",
+                    [3] = "Online Deep Sleep",
+                    [4] = "Ultra Deep Sleep"
+                }),
             [205] = Def(205, "GSM Cell ID", IoDataType.Unsigned, 2, group: "Permanent"),
             [206] = Def(206, "GSM Area Code", IoDataType.Unsigned, 2, group: "Permanent"),
             [210] = Def(210, "Overspeeding Event", IoDataType.Unsigned, 4, units: "km/h", group: "Eventual"),
@@ -96,7 +110,7 @@ internal static partial class IoElementCatalog
 
             // Additional standard IDs (5-8, 20, 22-23, 26-65)
             [5] = Def(5, "Analog Input 2", IoDataType.Unsigned, 2, units: "mV", group: "Permanent"),
-            [6] = Def(6, "Analog Input 3", IoDataType.Unsigned, 2, units: "mV", group: "Permanent"),
+            [6] = Def(6, "Analog Input 2", IoDataType.Unsigned, 2, units: "mV", group: "Permanent"),
             [20] = Def(20, "ICCID2", IoDataType.Unsigned, 4, group: "Permanent"),
             [22] = Def(22, "GNSS Fix Mode", IoDataType.Unsigned, 1, group: "Permanent"),
             [23] = Def(23, "External Voltage", IoDataType.Unsigned, 2, units: "mV", group: "Permanent", description: "Alternate external voltage"),
