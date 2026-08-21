@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.Collections.Frozen;
-using System.Text;
 using Teltonika.Avl.Elements.Models;
 
 namespace Teltonika.Avl.Elements.Decoding;
@@ -21,7 +20,7 @@ public static class ValueDecoder
             IoDataType.Unsigned => DecodeUnsigned(span, multiplier, enumValues),
             IoDataType.Signed => DecodeSigned(span, multiplier),
             IoDataType.Hex => FormatHex(span),
-            IoDataType.Ascii => Encoding.UTF8.GetString(span),
+            IoDataType.Ascii => System.Text.Encoding.UTF8.GetString(span),
             _ => throw new ArgumentOutOfRangeException(nameof(dataType))
         };
     }

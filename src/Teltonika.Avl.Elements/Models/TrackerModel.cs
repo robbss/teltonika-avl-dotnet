@@ -59,6 +59,7 @@ public enum TrackerModel
     FMC130,
     FMC150,
     FMC230,
+    FMC234,
     FMC640,
     FMC650,
     FMC880,
