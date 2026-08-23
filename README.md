@@ -5,6 +5,7 @@ A .NET 10 library for parsing, encoding, and serving [Teltonika](https://teltoni
 ## Features
 
 - **Full codec support** &mdash; Codec 8, Codec 8 Extended, Codec 16 (data), Codec 12/13/14 (commands)
+- **TCP and UDP channels** &mdash; Both envelopes, including the UDP acknowledgement
 - **Parse & encode** &mdash; Symmetric API for reading and writing AVL packets
 - **TCP server** &mdash; Production-ready async server with IMEI validation, idle timeouts, and bidirectional GPRS commands
 - **IO element resolution** &mdash; Translate raw IO property IDs into named, typed values with units, using a built-in catalog of 150+ definitions across 78 tracker models
@@ -114,6 +115,38 @@ byte[] cmdBytes = AvlEncoder.EncodeCommand(command);
 // Encode an IMEI handshake frame
 byte[] imeiFrame = AvlEncoder.EncodeImei("356307042441013");
 ```
+
+## UDP channel
+
+The UDP form is not the TCP form in a datagram. TCP frames a packet with a four-zero preamble, a length
+prefix and a trailing CRC, and identifies the device once per connection with a separate IMEI handshake.
+UDP has no connection to hang that on, so every datagram carries its own header &mdash; length, packet
+id, AVL packet id and the IMEI inline &mdash; and drops the preamble and the CRC entirely.
+
+```csharp
+// Read a datagram: the IMEI comes with it, so no handshake state is needed
+if (AvlParser.TryParseUdp(datagram, out var received))
+{
+    Console.WriteLine($"{received!.Imei}: {received.Packet.Records.Count} records");
+
+    // Acknowledge it: both identifiers are echoed back so the device can match them
+    byte[] ack = AvlEncoder.EncodeUdpAcknowledgement(received);
+    await socket.SendToAsync(ack, remoteEndPoint);
+}
+```
+
+```csharp
+// Write one, as a device does
+byte[] datagram = AvlEncoder.EncodeUdp(packet, imei: "352093086403655", packetId: 0xCAFE, avlPacketId: 0x05);
+```
+
+`UdpFramer` is the underlying type if you want the envelope without the facade. There is **no CRC** on a
+UDP datagram &mdash; the protocol relies on UDP's own checksum, and the length field is the only
+integrity check the envelope carries, which is worth knowing before looking for one.
+
+UDP is the sensible transport for a high-device-count fleet: no socket per device, so no ephemeral-port
+ceiling. The bundled server is TCP-only for now; the UDP channel is parse/encode support that you can
+drive from any socket.
 
 ## TCP Server
 
