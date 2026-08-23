@@ -60,9 +60,11 @@ internal sealed class Codec16Decoder : ICodecDecoder
     {
         io = null;
 
-        // Codec 16 has a generation type byte between the event ID and the total count
+        // Codec 16 carries a generation type byte between the event ID and the total count. One per
+        // record - not one per group, which is what this used to assume: reading a byte before every
+        // group's count consumed four bytes that were not there and derailed the rest of the packet.
         if (!reader.TryReadBigEndian(out short eventIdRaw) ||
-            !reader.TryRead(out byte _) ||
+            !reader.TryRead(out byte generationType) ||
             !reader.TryRead(out byte totalCount))
         {
             error = Codec8Decoder.TruncatedError;
@@ -79,14 +81,14 @@ internal sealed class Codec16Decoder : ICodecDecoder
             return false;
         }
 
-        io = new IoElement((ushort)eventIdRaw, properties);
+        io = new IoElement((ushort)eventIdRaw, properties, generationType);
         return true;
     }
 
     private static bool TryReadIoGroup(ref SequenceReader<byte> reader, int valueSize, List<IoProperty> properties, out string? error)
     {
-        // Codec 16: each group has a generation type byte prefix
-        if (!reader.TryRead(out byte _) || !reader.TryRead(out byte count))
+        // Same group shape as Codec 8: a count, then id/value pairs.
+        if (!reader.TryRead(out byte count))
         {
             error = Codec8Decoder.TruncatedError;
             return false;

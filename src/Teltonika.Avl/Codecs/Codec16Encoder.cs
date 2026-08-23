@@ -31,7 +31,8 @@ public sealed class Codec16Encoder : IDataCodecEncoder
         foreach (var record in packet.Records)
         {
             size += 24; // timestamp + priority + gps
-            size += 4 + 8; // event id + generation type + total count + 4 groups of (generation type + count)
+            size += 4;  // event id (2) + generation type + total count
+            size += 4;  // one count byte per value-size group
             foreach (var prop in record.IoData.Properties)
             {
                 int length = prop.Value.Length;
@@ -55,8 +56,8 @@ public sealed class Codec16Encoder : IDataCodecEncoder
     {
         writer.WriteUInt16(io.EventId);
 
-        // Generation type byte (not stored in model, default 0x00)
-        writer.WriteByte(0x00);
+        // One generation type byte per record, from the model so a decoded packet re-encodes exactly.
+        writer.WriteByte(io.GenerationType);
 
         writer.WriteByte((byte)io.Properties.Count);
         WriteIoGroup(ref writer, io, 1);
@@ -74,8 +75,6 @@ public sealed class Codec16Encoder : IDataCodecEncoder
                 count++;
         }
 
-        // Generation type byte per group
-        writer.WriteByte(0x00);
         writer.WriteByte((byte)count);
         foreach (var prop in io.Properties)
         {
